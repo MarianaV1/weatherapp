@@ -142,3 +142,6 @@ h3 {
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); /* Subtle shadow */
     max-width: max-content;
 }
+#unit-toggle{
+    margin: 5px;
+}

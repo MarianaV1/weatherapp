@@ -22,7 +22,8 @@ function processWeatherData(data) {
     // Extract current weather information
     const processedData = {
         location: address,
-        temperature: currentConditions.temp,
+        temperatureCelsius: currentConditions.temp,
+        temperatureFahrenheit: (currentConditions.temp * 9/5) + 32,
         conditions: currentConditions.conditions,
         windSpeed: currentConditions.windspeed,
     };
@@ -30,8 +31,10 @@ function processWeatherData(data) {
     // Extract a 7-day forecast
     const weekForecast = days.slice(0, 7).map(day => ({
         date: day.datetime,
-        tempMax: day.tempmax,
-        tempMin: day.tempmin,
+        tempMaxCelsius: day.tempmax,
+        tempMaxFahrenheit: (day.tempmax * 9/5) + 32,
+        tempMinCelsius: day.tempmin,
+        tempMinFahrenheit: (day.tempmin * 9/5) + 32,
         conditions: day.conditions
     }));
     
@@ -40,6 +43,7 @@ function processWeatherData(data) {
     console.log(processedData); // Log the processed data
     return processedData;
 }
+
 
 document.getElementById('location-form').addEventListener('submit', async function(e) {
     e.preventDefault();
@@ -57,12 +61,13 @@ async function displayWeather(data) {
     // Fetch a GIF related to the current weather conditions
     const gifUrl = await getWeatherGif(data.conditions);
     
-    // Display current weather
+    // Initial display of current weather in Celsius
     const currentWeatherHtml = `
         <h2>Weather in ${data.location}</h2>
-        <p>Temperature: ${data.temperature}°C</p>
+        <p>Temperature: <span id="current-temp">${data.temperatureCelsius}</span>°<span id="current-unit">C</span></p>
         <p class="cond">${data.conditions}</p>
-        <img src="${gifUrl}" alt="${data.conditions} GIF" class="weather-gif">
+        <button id="unit-toggle">Switch to °F</button>
+        <br><img src="${gifUrl}" alt="${data.conditions} GIF" class="weather-gif">
     `;
     
     // Display weekly forecast horizontally with weekday names and icons
@@ -72,19 +77,54 @@ async function displayWeather(data) {
         const iconClass = getWeatherIcon(day.conditions);
         
         return `
-            <div class="forecast-day">
+            <div class="forecast-day" data-max-celsius="${day.tempMaxCelsius}" data-max-fahrenheit="${day.tempMaxFahrenheit}" data-min-celsius="${day.tempMinCelsius}" data-min-fahrenheit="${day.tempMinFahrenheit}">
                 <h3>${weekdayName}</h3>
                 <i class="wi ${iconClass}"></i>
                 <p>${date.toLocaleDateString('en-US')}</p>
-                <p>High: ${day.tempMax}°C</p>
-                <p>Low: ${day.tempMin}°C</p>
+                <p>High: <span class="forecast-max">${day.tempMaxCelsius}</span>°<span class="forecast-unit">C</span></p>
+                <p>Low: <span class="forecast-min">${day.tempMinCelsius}</span>°<span class="forecast-unit">C</span></p>
                 <p>Conditions: ${day.conditions}</p>
             </div>
         `;
     }).join('');
     
     weatherDisplay.innerHTML = currentWeatherHtml + '<h3>7-Day Forecast</h3><div class="forecast-container">' + forecastHtml + '</div>';
+
+    // Add event listener for the unit toggle button
+    let isCelsius = true;
+    document.getElementById('unit-toggle').addEventListener('click', () => {
+        isCelsius = !isCelsius;
+        updateTemperatureUnits(isCelsius, data);
+    });
 }
+
+// Function to update the temperature units
+function updateTemperatureUnits(isCelsius, data) {
+    // Update the current temperature
+    const currentTempElement = document.getElementById('current-temp');
+    const currentUnitElement = document.getElementById('current-unit');
+    currentTempElement.textContent = isCelsius ? data.temperatureCelsius : data.temperatureFahrenheit;
+    currentUnitElement.textContent = isCelsius ? 'C' : 'F';
+
+    // Update the button text
+    const unitToggleButton = document.getElementById('unit-toggle');
+    unitToggleButton.textContent = isCelsius ? 'Switch to °F' : 'Switch to °C';
+
+    // Update the forecast temperatures
+    const forecastDays = document.querySelectorAll('.forecast-day');
+    forecastDays.forEach(day => {
+        const maxTempElement = day.querySelector('.forecast-max');
+        const minTempElement = day.querySelector('.forecast-min');
+        maxTempElement.textContent = isCelsius ? day.getAttribute('data-max-celsius') : day.getAttribute('data-max-fahrenheit');
+        minTempElement.textContent = isCelsius ? day.getAttribute('data-min-celsius') : day.getAttribute('data-min-fahrenheit');
+
+        const forecastUnitElements = day.querySelectorAll('.forecast-unit');
+        forecastUnitElements.forEach(unitElement => {
+            unitElement.textContent = isCelsius ? 'C' : 'F';
+        });
+    });
+}
+
 
 
 
